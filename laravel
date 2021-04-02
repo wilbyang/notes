@@ -19,7 +19,7 @@ $events = Event::simplePaginate(10);
 
 php artisan make:controller EventsController --model=Event # 直接把event这个model当成参数
 
-php artisan make:model Event --controller --resource
+php artisan make:model Event --controller --resource --migration
 
 
 //查询
