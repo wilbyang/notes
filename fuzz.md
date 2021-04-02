@@ -18,3 +18,7 @@ func FuzzXXX(f *testing.F) {
 ```
 
 2. Go原生支持fuzz test的提案被accept - https://github.com/golang/go/issues/44551
+
+## refs
+
+1. https://adalogics.com/blog/getting-started-with-go-fuzz
