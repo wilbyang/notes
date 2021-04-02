@@ -12,6 +12,7 @@ php artisan make:controller EventsController --resource #resource means crud
 
 
 ////分页
+
 php artisan vendor:publish --tag=laravel-pagination
 
 $events = Events::paginate(10);
@@ -29,9 +30,11 @@ php artisan make:model Event --controller --resource --migration
 
 
 //查询
+
 $eventExists = Event::where('city' , 'Dublin')->exists();
 
 //命名约定
+
 setAttributeNameAttribute
 
 getAttributeNameAttribute
