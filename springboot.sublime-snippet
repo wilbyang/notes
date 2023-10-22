@@ -1,0 +1,68 @@
+<snippet>
+	<content><![CDATA[
+--- get started
+
+implementation 'org.springframework.boot:spring-boot-starter-web'
+@RestController
+class Foobar {
+		@GetMapping(value = "/students/{id}")
+    public Student getStudentById(@PathVariable Long id) {
+    }
+}
+
+--spring ioc/bean
+@PostConstruct
+
+---mysql+jpa
+
+implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+implementation 'com.mysql:mysql-connector-j:8.1.0'
+
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/sbjpa
+    username: root
+    password: yangbo
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+@Entity
+@Getter
+@Setter
+public class Student {
+    @Id
+    private Long id;
+    private String name;
+    private int age;
+    @Column(name = "visit", columnDefinition = "json")
+    @Convert(converter = VisitConverter.class)
+    private Visit visit;
+}
+
+---jackson
+spring:
+  jackson:
+    default-property-inclusion: non_null
+
+---swagger
+implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0'
+
+--aop
+
+
+---lombok
+@Slf4j
+@Data
+@Builder
+@NoArgsConstructor
+
+]]></content>
+	<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+	<tabTrigger>springboot</tabTrigger>
+	<!-- Optional: Set a scope to limit where the snippet will trigger -->
+	<scope>source.asp</scope>
+</snippet>
+
+
