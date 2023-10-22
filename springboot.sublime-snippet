@@ -13,6 +13,11 @@ class Foobar {
 --spring ioc/bean
 @PostConstruct
 
+--springboot misc
+
+@EnableScheduling
+@Scheduled(cron = " 0/50 * * * * ?")
+
 ---mysql+jpa
 
 implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -51,12 +56,30 @@ implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0'
 
 --aop
 
+@EnableAspectJAutoProxy
+
+@Aspect
+@Component
+public class LoggingAspect {
+    
+    @Pointcut("execution(* com.example.demo.service.MyService.*(..))")
+    public void serviceMethods() {}
+
+    @Before("serviceMethods()")
+    public void beforeServiceMethod() {
+        System.out.println("Before executing a service method.");
+    }
+}
 
 ---lombok
 @Slf4j
 @Data
 @Builder
 @NoArgsConstructor
+
+
+---kafka
+@KafkaListener(topics = "tracardi1", groupId = "springcss")
 
 ]]></content>
 	<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
