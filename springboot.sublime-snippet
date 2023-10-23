@@ -1,6 +1,6 @@
 <snippet>
 	<content><![CDATA[
---- get started
+### get started
 
 implementation 'org.springframework.boot:spring-boot-starter-web'
 @RestController
@@ -10,15 +10,15 @@ class Foobar {
     }
 }
 
---spring ioc/bean
+### spring ioc/bean
 @PostConstruct
 
---springboot misc
+### springboot misc
 
 @EnableScheduling
 @Scheduled(cron = " 0/50 * * * * ?")
 
----mysql+jpa
+### mysql+jpa
 
 implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 implementation 'com.mysql:mysql-connector-j:8.1.0'
@@ -46,15 +46,15 @@ public class Student {
     private Visit visit;
 }
 
----jackson
+### jackson
 spring:
   jackson:
     default-property-inclusion: non_null
 
----swagger
+### swagger
 implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0'
 
---aop
+### aop
 
 @EnableAspectJAutoProxy
 
@@ -71,15 +71,63 @@ public class LoggingAspect {
     }
 }
 
----lombok
+### lombok
 @Slf4j
 @Data
 @Builder
 @NoArgsConstructor
 
 
----kafka
+### kafka
 @KafkaListener(topics = "tracardi1", groupId = "springcss")
+
+
+### cache
+
+implementation 'org.springframework.boot:spring-boot-starter-cache'
+implementation 'com.github.ben-manes.caffeine:caffeine:3.0.4'
+
+
+@Configuration
+@EnableCaching
+public class CachConfig {
+    @Bean
+    public CacheManager cacheManager() {
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager("books");
+        cacheManager.setCaffeine(Caffeine.newBuilder().maximumSize(100));
+        return cacheManager;
+    }
+
+}
+
+
+@Cacheable(cacheNames = "books")
+    public List<Student> GetAll() {
+        return studentRepository.findAll();
+    }
+
+
+### docker
+
+plugin {
+ 	id 'com.google.cloud.tools.jib' 
+}
+
+jib {
+    from {
+        image = 'openjdk:11-jre-slim' // 指定基础镜像
+    }
+    to {
+        image = 'my-container-image:latest' // 指定目标镜像名称和标签
+    }
+    container {
+        jvmFlags = ['-Xmx512m', '-Xms256m'] // 配置 JVM 参数
+        ports = ['8080'] // 暴露端口
+    }
+}
+
+./gradlew jibDockerBuild -Djib.dockerClient.executable=/Users/boya/.rd/bin/docker
+
 
 ]]></content>
 	<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
