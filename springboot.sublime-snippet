@@ -72,6 +72,10 @@ public class LoggingAspect {
 }
 
 ### lombok
+
+implementation 'org.projectlombok:lombok:1.18.28'
+annotationProcessor 'org.projectlombok:lombok:1.18.28'
+
 @Slf4j
 @Data
 @Builder
@@ -128,6 +132,20 @@ jib {
 
 ./gradlew jibDockerBuild -Djib.dockerClient.executable=/Users/boya/.rd/bin/docker
 
+### http interaction
+
+implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+@EnableFeignClients
+
+@FeignClient(name = "httpbin", url = "https://httpbin.org")
+public interface IHttpBin {
+    @GetMapping("/get")
+    String get();
+}
+
+
+String s = iHttpBin.get();
 
 ]]></content>
 	<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
