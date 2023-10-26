@@ -1,4 +1,3 @@
-
 <snippet>
 	<content><![CDATA[
 --- routing
@@ -22,3 +21,5 @@ export class AppRoutingModule { }
 	<!-- Optional: Set a scope to limit where the snippet will trigger -->
 	<scope>source.asp</scope>
 </snippet>
+
+
