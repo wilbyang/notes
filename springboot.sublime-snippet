@@ -38,12 +38,19 @@ spring:
 @Setter
 public class Student {
     @Id
+    @GeneratedValue(strategy=GenerationType.AUTO)
     private Long id;
     private String name;
     private int age;
     @Column(name = "visit", columnDefinition = "json")
     @Convert(converter = VisitConverter.class)
     private Visit visit;
+
+    @Column(name = "created_time", updatable = false)
+    private Instant createdTime;
+
+    @Column(unique = true)
+    private String userName;
 }
 
 ### jackson
@@ -147,6 +154,36 @@ public interface IHttpBin {
 
 String s = iHttpBin.get();
 
+
+### test
+@ExtendWith(SpringExtension.class)
+@DataJpaTest
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@TestPropertySource("classpath:test.properties")
+public class StudentRepositoryTest {
+
+    private final StudentRepository repository;
+
+    @Autowired
+    public StudentRepositoryTest(StudentRepository repository) {
+        this.repository = repository;
+    }
+
+    @Test
+    public void save_and_get_shouldWork() {
+        Student bo1 = Student.builder().age(12).email("yang.wilby@gmail.com").name("bo1").build();
+        Student bo2 = Student.builder().age(12).email("yang.wilby@gmail.com").name("bo2").build();
+
+        repository.save(bo1);
+        repository.save(bo2);
+
+        List<Student> all = repository.findAll();
+
+        assertThat(all).hasSize(2);
+    }
+
+
+}
 ]]></content>
 	<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
 	<tabTrigger>springboot</tabTrigger>
