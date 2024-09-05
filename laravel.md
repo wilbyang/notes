@@ -1,3 +1,4 @@
+```
 php artisan make:model Event --migration
 
 php artisan make:migration add_enabled_to_events_table --table=events
@@ -9,8 +10,9 @@ php artisan tinker
 php artisan migrate:rollback
 
 php artisan make:controller EventsController --resource #resource means crud
+```
 
-
+```
 ////分页
 
 php artisan vendor:publish --tag=laravel-pagination
@@ -43,3 +45,4 @@ getAttributeNameAttribute
 local
 
 global
+```
