@@ -42,3 +42,10 @@ native-image HelloWorld
 ```
 mvn -Pnative clean native:compile -f pom.xml
 ```
+
+```
+java -jar arthas-boot.jar
+profiler start
+profiler stop --format flamegraph
+```
+其中绿色部分代表Java代码，黄色部分代表JVM C++代码，橙色部分代表内核态C语言代码，红色代表用户态C语言代码。
