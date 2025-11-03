@@ -43,25 +43,31 @@ spring:
 ```
 
 ```java
+package com.example.demo;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import java.time.Instant;
+
 @Entity
-@Getter
-@Setter
-public class Student {
+public record Student(
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
-    private Long id;
-    private String name;
-    private int age;
-    @Column(name = "visit", columnDefinition = "json")
-    @Convert(converter = VisitConverter.class)
-    private Visit visit;
-
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    Long id,
+    
+    String name,
+    
+    int age,
+    
     @Column(name = "created_time", updatable = false)
-    private Instant createdTime;
-
+    Instant createdTime,
+    
     @Column(unique = true)
-    private String userName;
-}
+    String userName
+) {}
 ```
 
 ### jackson
@@ -77,8 +83,9 @@ spring:
 ```
 implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0'
 ```
+http://localhost:8080/swagger-ui/index.html
 ### aop
-
+implementation 'org.springframework.boot:spring-boot-starter-aop'
 ```java
 @EnableAspectJAutoProxy
 
@@ -142,6 +149,17 @@ public class CachConfig {
 public List<Student> GetAll() {
     return studentRepository.findAll();
 }
+```
+###
+```
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(
+            HttpMessageNotReadableException ex
+    ) {}
+}
+
 ```
 
 ### docker
