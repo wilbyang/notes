@@ -1,0 +1,8 @@
+{
+  "alfredsnippet" : {
+    "snippet" : "---acellemail\nmkdir -p storage\/framework\/{sessions,views,cache}\nmkdir -p storage\/{app,job,logs}\ncomposer install --ignore-platform-req=ext-mailparse\ncp .env.example .env\nphp artisan key:generate\nsudo chgrp -R www-data storage\nsudo chmod -R g+w storage\napt install php8.2 php8.2-cli php8.2-fpm php8.2-mysql php8.2-xml php8.2-curl php8.2-mbstring php8.2-zip php8.2-gd php8.2-intl php8.2-soap php8.2-bcmath php8.2-xdebug\n\n---\ncd \/tmp\ngit clone --branch v0.8.0 https:\/\/github.com\/pgvector\/pgvector.git\ncd pgvector\ncd \/tmp\/pgvector\nmake & make install \n\n\nCredo is a static code analysis tool for the Elixir language with a focus on teaching and code consistency. \nSobelow is a security-focused static analysis tool for Elixir & the Phoenix framework. \n\nDialyzer\/Dialyzir as a typechecking tool they used with Elixir\/Erlang\nhttps:\/\/github.com\/sorentwo\/oban: Robust job processing in Elixir, backed by modern PostgreSQL and SQLite3\n\nentity_type.bundle.info\ngetAllBundleInfo()\n\nblock\nblock_content\nblock_content_type\ncomment_type\ncomment\ncontact_form\ncontact_message\neditor\nfield_config\nfield_storage_config\nfile\nfilter_format\nimage_style\nconfigurable_language\nlanguage_content_settings\nmenu_link_content\nnode_type\nnode\npath_alias\nsearch_page\nshortcut_set\nshortcut\naction\nmenu\ntaxonomy_term\ntaxonomy_vocabulary\nuser\nuser_role\nview\ndate_format\nentity_form_mode\nentity_view_display\nentity_form_display\nentity_view_mode\nbase_field_override",
+    "uid" : "B46F8144-94CB-4774-9859-204D3324F3D9",
+    "name" : "startup",
+    "keyword" : ""
+  }
+}

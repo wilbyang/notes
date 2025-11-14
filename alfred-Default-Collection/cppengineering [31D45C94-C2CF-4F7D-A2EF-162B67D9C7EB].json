@@ -1,0 +1,8 @@
+{
+  "alfredsnippet" : {
+    "snippet" : "--- asio\ncmake_minimum_required(VERSION 3.12)\nproject(MyProject)\ninclude(FetchContent)\nset(CMAKE_CXX_STANDARD 20)\n\nfind_package(Threads REQUIRED)\n\nfind_package(Asio 1.21.0 QUIET)\nif (NOT Asio_FOUND)\n    FetchContent_Declare(asio GIT_REPOSITORY https:\/\/github.com\/chriskohlhoff\/asio.git GIT_TAG asio-1-21-0)\n    FetchContent_GetProperties(asio)\n    if (NOT asio_POPULATED)\n        FetchContent_Populate(asio)\n        add_library(asio INTERFACE)\n        target_include_directories(asio INTERFACE ${asio_SOURCE_DIR}\/asio\/include)\n        target_compile_definitions(asio INTERFACE ASIO_STANDALONE ASIO_NO_DEPRECATED)\n        target_link_libraries(asio INTERFACE Threads::Threads)\n    endif ()\nendif()\n\n\n\nadd_executable(executors executors.cpp)\ntarget_link_libraries(executors asio)\n\n--- libevent\n\ninclude(FetchContent)\nFetchContent_Declare(cpr GIT_REPOSITORY https:\/\/github.com\/libcpr\/cpr.git\n                         GIT_TAG 0817715923c9705e68994eb52ef9df3f6845beba) # The commit hash for 1.10.x. Replace with the latest from: https:\/\/github.com\/libcpr\/cpr\/releases\nFetchContent_MakeAvailable(cpr)\ntarget_link_libraries(your_target_name PRIVATE cpr::cpr)\n\n\n---proto\nprotoc --cpp_out=. test2.proto\ng++ pb2.cc test2.pb.cc -std=c++17 -lprotobuf",
+    "uid" : "31D45C94-C2CF-4F7D-A2EF-162B67D9C7EB",
+    "name" : "cppengineering",
+    "keyword" : ""
+  }
+}

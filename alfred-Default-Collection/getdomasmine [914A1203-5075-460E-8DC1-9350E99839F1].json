@@ -1,0 +1,8 @@
+{
+  "alfredsnippet" : {
+    "snippet" : "var treeWalker = document.createTreeWalker(\n    document.getElementById(\"content\"),\n    NodeFilter.SHOW_ELEMENT,\n    { acceptNode: function(node) { return [\"P\", \"H1\", \"H2\", \"H3\", \"H4\", \"H5\", \"UL\", \"OL\"].includes(node.tagName)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_SKIP; } }\n);\n\n\/\/ create a new div\nvar div2 = document.createElement(\"div\");\n\n\nwhile (treeWalker.nextNode()) {\n    var node = treeWalker.currentNode;\n    \/\/ construct a node of the same type and append it to\n    \/\/ the new div\n    var newNode = document.createElement(node.tagName);\n    newNode.innerText = node.innerText;\n    div2.appendChild(newNode);\n}",
+    "uid" : "914A1203-5075-460E-8DC1-9350E99839F1",
+    "name" : "getdomasmine",
+    "keyword" : ""
+  }
+}

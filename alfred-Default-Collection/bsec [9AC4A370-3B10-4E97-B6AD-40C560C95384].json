@@ -1,0 +1,8 @@
+{
+  "alfredsnippet" : {
+    "snippet" : "echo 0 > \/proc\/sys\/kernel\/randomize_va_space\n\n#include <stdio.h>\n#include <stdlib.h>\nunsigned long get_sp(void)\n{\n    __asm__(\"movl %esp, %eax\");\n}\nint main(void)\n{\n    printf(\"malloc: %p\\n\", malloc(16));\n    printf(\" stack: 0x%lx\\n\", get_sp());\n    return 0;\n}\n在启用 ASLR 的状态下，反复运行这个程序，我们会发现每次显示的地 址都不同。\nhttps:\/\/github.com\/kenjiaiko\/binarybook\n\n---\n\n#include <pthread.h>\nint Global;\nvoid *Thread1(void *x) {\n  Global = 42;\n  return x;\n}\nint main() {\n  pthread_t t;\n  pthread_create(&t, NULL, Thread1, NULL);\n  Global = 43;\n  pthread_join(t, NULL);\n  return Global;\n}\n\nclang -fsanitize=thread -g -O1 tiny_race.c & .\/a.out",
+    "uid" : "9AC4A370-3B10-4E97-B6AD-40C560C95384",
+    "name" : "bsec",
+    "keyword" : ""
+  }
+}

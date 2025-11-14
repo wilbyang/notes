@@ -1,0 +1,8 @@
+{
+  "alfredsnippet" : {
+    "snippet" : "use rquickjs::{Context, Runtime};\n\nuse axum::{response::{Html, IntoResponse}, routing::{get, post}, Router};\n\n\n\n#[tokio::main]\nasync fn main() {\n\n    \/\/ build our application with a route\n    let app = Router::new().route(\"\/\", get(handler))\n    .route(\"\/todos\", post(run));\n\n    \/\/ run it\n    let listener = tokio::net::TcpListener::bind(\"127.0.0.1:3000\")\n        .await\n        .unwrap();\n    println!(\"listening on {}\", listener.local_addr().unwrap());\n    axum::serve(listener, app).await.unwrap();\n}\nasync fn run() -> impl IntoResponse  {\n    let rt = Runtime::new().unwrap();\n    let ctx = Context::full(&rt).unwrap();\n    \n\n    \n    ctx.with(|ctx| {\n\n\n        \n        let ret = ctx.eval::<rquickjs::Value, String >(\"1 + 2\".to_string());\n        match ret {\n            Ok(value) => format!(\"{:?}\", value),\n            Err(err) => format!(\"Error: {}\", err),\n        }\n    });\n\n    \n}\nasync fn handler() -> Html<&'static str> {\n    Html(\"<h1>Hello, World!<\/h1>\")\n}\n\n\n",
+    "uid" : "A6632046-9B49-4DE3-89E2-71441ED315AC",
+    "name" : "rquickjs-rs",
+    "keyword" : ""
+  }
+}

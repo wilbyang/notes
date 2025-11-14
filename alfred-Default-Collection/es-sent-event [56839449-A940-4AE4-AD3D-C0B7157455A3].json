@@ -1,0 +1,8 @@
+{
+  "alfredsnippet" : {
+    "snippet" : "GET events-buckets\/_search\n{\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"term\": {\n            \"activity_id\": {\n              \"value\": \"cfbd66c0-7631-425f-9956-f8f2f4728036\"\n            }\n          }\n        },\n        {\n          \"term\": {\n            \"account_id\": {\n              \"value\": \"a-rnd-aud-int-0\"\n            }\n          }\n        },\n        {\n          \"term\": {\n            \"event_type\": {\n              \"value\": \"sent\"\n            }\n          }\n        }\n      ]\n    }\n  }\n}\n\n#delete by id\nPOST \/events-buckets\/_delete_by_query\n{\n  \"query\": {\n    \"bool\": {\n      \"must\": [\n        {\n          \"term\": {\n            \"activity_id\": \"cfbd66c0-7631-425f-9956-f8f2f4728036\"\n          }\n        },\n        {\n          \"term\": {\n            \"account_id\": \"a-rnd-aud-int-0\"\n          }\n        }\n      ]\n    }\n  }\n}\n\n\n\nGET \/pa-sheetal-c2\/_search\n{\n  \"query\": {\n    \"bool\": {\n      \"should\": [\n        {\n          \"wildcard\": {\n            \"Name\": {\n              \"value\": \"*onpush*\"\n            }\n          }\n        },\n        {\n          \"fuzzy\": {\n            \"Name\": {\n              \"value\": \"onpush\"\n            }\n          }\n        }\n      ],\n      \"minimum_should_match\": 1\n    }\n  }\n  \n}\n---slow log\n\nPUT events\/_settings\n{\n  \"index.search.slowlog.threshold.query.warn\": \"5s\",\n  \"index.search.slowlog.threshold.query.info\": \"2s\"\n}",
+    "uid" : "56839449-A940-4AE4-AD3D-C0B7157455A3",
+    "name" : "es-sent-event",
+    "keyword" : ""
+  }
+}

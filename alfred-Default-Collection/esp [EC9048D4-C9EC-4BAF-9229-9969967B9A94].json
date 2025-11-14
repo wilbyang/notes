@@ -1,0 +1,8 @@
+{
+  "alfredsnippet" : {
+    "snippet" : "ntp: RFC1305\n\ncode generation: \/Users\/boya\/Library\/Application Support\/Sublime Text\/Packages\/User\/cppsnippets\/portal\npowercfg -hibernate on\nrundll32.exe powrprof.dll,SetSuspendState \n\n\/Users\/boya\/workplace\/heads\/reverse-proxy\/src\/load_balancer.rs\n\nspf \/Users\/boya\/projects\/xxhh4\/\nvectordb projects\/vdb\/\ngocache \/Users\/boya\/projects\/goca\/main.go (aslo csv enrichment with querying dynamodb)\neditor \/Users\/boya\/workplace\/emailsms\/myproject\/static\/index.html\nexpression evaluation \/Users\/boya\/workplace\/rust-tmp\/xxhh2\/src\/main.rs\nlog \/Users\/boya\/Library\/Application Support\/Sublime Text\/Packages\/User\/rustsnippets\/tmp\/src\/main.rs\n\nwally: Distributed Stream Processing ⭐️ 1471 #golang\n\ncmake+vcpkg: \/Users\/boya\/Documents\/cppweeklynews\/tmp\n--flink:\ncd \/Users\/boya\/Downloads\/flink-1.20.0\nbin\/flink run ~\/Library\/Application\\ Support\/Sublime\\ Text\/Packages\/User\/cppsnippets\/ttmp\/app\/build\/libs\/app.jar\n\n--go汇编\n\/Users\/boya\/projects\/go_plan9",
+    "uid" : "EC9048D4-C9EC-4BAF-9229-9969967B9A94",
+    "name" : "esp",
+    "keyword" : ""
+  }
+}

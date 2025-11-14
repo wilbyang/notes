@@ -1,0 +1,8 @@
+{
+  "alfredsnippet" : {
+    "snippet" : "<snippet>\n\t<content><![CDATA[]]><\/content>\n\t<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->\n\t<tabTrigger>cppbuild<\/tabTrigger>\n\t<!-- Optional: Set a scope to limit where the snippet will trigger -->\n\t<scope>source.c++<\/scope>\n<\/snippet>",
+    "uid" : "18F0775F-7185-45E6-A00E-A6624B8B2720",
+    "name" : "sublimesnippet",
+    "keyword" : ""
+  }
+}

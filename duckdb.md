@@ -17,46 +17,198 @@ DuckDB 提供：嵌入式、列存、向量化执行 + ANSI SQL + 零网络 + �
 ## 1. 真实场景与策略
 
 ### 场景 A：产品分析迭代极慢（需要快速验证行为假设）
+
+**数据 Schema**：
+```sql
+-- 表名：events（事件日志表）
+CREATE TABLE events (
+    event_id BIGINT,          -- 事件唯一 ID
+    user_id BIGINT,           -- 用户 ID
+    session_id VARCHAR,       -- 会话 ID
+    action VARCHAR,           -- 行为类型：view, click, add_to_cart, purchase
+    item_id BIGINT,           -- 物品 ID
+    timestamp TIMESTAMP,      -- 事件时间
+    page_url VARCHAR,         -- 页面 URL
+    device_type VARCHAR,      -- 设备类型：mobile, desktop, tablet
+    properties JSON           -- 其他属性（JSON 格式）
+);
+
+-- 示例数据
+-- event_id | user_id | action | timestamp           | device_type
+-- ---------|---------|--------|---------------------|------------
+-- 1001     | 10001   | view   | 2025-10-15 10:23:45 | mobile
+-- 1002     | 10001   | click  | 2025-10-15 10:24:12 | mobile
+-- 1003     | 10002   | view   | 2025-10-15 10:25:03 | desktop
+-- 1004     | 10002   | view   | 2025-10-15 10:25:45 | desktop
+```
+
 痛点：在传统数仓里跑一个改动要排队；本地 CSV 数据又处理慢。
 策略：将原始事件日志 Parquet 直接通过 DuckDB 外部表读取，使用窗口函数 + 复杂聚合在本地秒级完成；用 notebook 做交互式迭代。
-要点：`SELECT user_id, COUNT(*) FILTER(WHERE action='click') / NULLIF(COUNT(*) FILTER(WHERE action='view'),0) AS click_view_ratio FROM events GROUP BY user_id;`
+要点：
+```sql
+SELECT user_id,
+       COUNT(*) FILTER(WHERE action='click') /
+       NULLIF(COUNT(*) FILTER(WHERE action='view'),0) AS click_view_ratio
+FROM events
+GROUP BY user_id;
+```
 成功指标：假设验证时间从小时 → 分钟。
 
 ### 场景 B：训练数据抽样与特征生成耦合严重
+
+**数据 Schema**：
+```sql
+-- 表名：train_data（训练数据表）
+CREATE TABLE train_data (
+    id BIGINT,              -- 样本唯一 ID
+    ts TIMESTAMP,           -- 时间戳
+    label INTEGER,          -- 标签（0/1 二分类或多分类）
+    user_age INTEGER,       -- 用户年龄
+    user_gender VARCHAR,    -- 用户性别
+    item_price DECIMAL,     -- 商品价格
+    meta JSON,              -- 元数据（包含 country, city 等）
+    features DOUBLE[]       -- 预计算特征数组
+);
+
+-- 示例数据（meta 包含 JSON 结构）
+-- id    | ts                  | label | meta                              | features
+-- ------|---------------------|-------|-----------------------------------|----------
+-- 10001 | 2025-10-01 08:30:00 | 1     | {"country":"CN","city":"Beijing"} | [0.5, 0.8, 1.2]
+-- 10002 | 2025-10-01 09:15:00 | 0     | {"country":"US","city":"NYC"}     | [0.3, 0.6, 0.9]
+-- 10003 | 2025-10-01 10:20:00 | 1     | {"country":"CN","city":"Shanghai"}| [0.7, 0.9, 1.5]
+```
+
 痛点：Python pandas 特征工程代码冗长且慢；难以复现同一抽样逻辑。
 策略：把特征工程表达为 SQL：使用 CTE 分层、窗口函数产出统计特征、`UNNEST` 处理数组；DuckDB 向量化降低 Python 解释器开销。
 要点：
 ```sql
 WITH base AS (
-	SELECT id, ts, label, json_extract_scalar(meta,'$.country') AS country
-	FROM parquet_scan('data/train/*.parquet')
+    SELECT id, ts, label, json_extract_scalar(meta,'$.country') AS country
+    FROM parquet_scan('data/train/*.parquet')
 ), stats AS (
-	SELECT country, COUNT(*) AS cnt, AVG(label) AS avg_label FROM base GROUP BY country
+    SELECT country, COUNT(*) AS cnt, AVG(label) AS avg_label FROM base GROUP BY country
 )
 SELECT b.*, s.avg_label FROM base b LEFT JOIN stats s USING(country);
 ```
 成功指标：特征构建耗时降低 3~10x；SQL 可版本化与审计。
 
-### 场景 C：ETL 前置“质量闸门”缺失（脏数据流入下游）
+### 场景 C：ETL 前置"质量闸门"缺失（脏数据流入下游）
+
+**数据 Schema**：
+```sql
+-- 表名：data（待检测数据表）
+CREATE TABLE data (
+    id BIGINT PRIMARY KEY,    -- 主键 ID（需检测唯一性）
+    user_id BIGINT,           -- 用户 ID
+    order_id VARCHAR,         -- 订单 ID（需检测唯一性）
+    amount DECIMAL,           -- 金额（需检测空值和异常值）
+    created_at TIMESTAMP,     -- 创建时间（需检测空值）
+    status VARCHAR,           -- 状态（需检测枚举值范围）
+    region VARCHAR            -- 地区
+);
+
+-- 示例数据（包含质量问题）
+-- id    | user_id | order_id | amount | created_at          | status
+-- ------|---------|----------|--------|---------------------|--------
+-- 1001  | 10001   | O001     | 99.99  | 2025-10-15 10:00:00 | paid
+-- 1002  | 10002   | O002     | NULL   | 2025-10-15 11:00:00 | paid    -- 空值
+-- 1003  | 10003   | O001     | 150.00 | NULL                | pending -- 空值 + 重复订单
+-- 1004  | 10004   | O003     | -50.00 | 2025-10-15 12:00:00 | unknown -- 异常金额 + 非法状态
+```
+
 痛点：数据错误只能在下游模型/报表发现，修复链路长。
 策略：DuckDB 作为本地质量预检：集中执行规则（空值率、分布偏差、主键唯一性）并输出 JSON 报告，失败则阻断提交。
 要点：
 ```sql
-SELECT 'null_rate' AS rule, COUNT(*) FILTER(WHERE col IS NULL)*1.0/COUNT(*) AS value FROM data;
-SELECT col, COUNT(*) AS dup_cnt FROM data GROUP BY col HAVING COUNT(*)>1; -- 唯一性
+-- 检测空值率
+SELECT 'null_rate' AS rule, COUNT(*) FILTER(WHERE amount IS NULL)*1.0/COUNT(*) AS value FROM data;
+
+-- 检测唯一性
+SELECT order_id, COUNT(*) AS dup_cnt FROM data GROUP BY order_id HAVING COUNT(*)>1;
 ```
 成功指标：质量缺陷检测前移；下游回滚减少。
 
 ### 场景 D：跨格式联邦查询（多源拼接分析）
+
+**数据 Schema**：
+```sql
+-- 文件 1：s3://bucket/a.parquet（用户主表，Parquet 格式）
+CREATE TABLE users (
+    id BIGINT,              -- 用户 ID
+    name VARCHAR,           -- 用户名
+    email VARCHAR,          -- 邮箱
+    registered_at TIMESTAMP -- 注册时间
+);
+
+-- 文件 2：local/b.csv（订单表，CSV 格式）
+CREATE TABLE orders (
+    id BIGINT,              -- 订单 ID
+    user_id BIGINT,         -- 用户 ID（关联键）
+    amount DECIMAL,         -- 订单金额
+    order_date DATE         -- 订单日期
+);
+
+-- 示例数据
+-- users.parquet:
+-- id    | name     | email              | registered_at
+-- ------|----------|--------------------|-----------------
+-- 10001 | Alice    | alice@example.com  | 2025-01-15
+-- 10002 | Bob      | bob@example.com    | 2025-02-20
+
+-- orders.csv:
+-- id   | user_id | amount | order_date
+-- -----|---------|--------|------------
+-- 1    | 10001   | 99.99  | 2025-10-15
+-- 2    | 10001   | 150.00 | 2025-10-16
+-- 3    | 10002   | 75.50  | 2025-10-15
+```
+
 痛点：不同格式/路径数据先要导入统一仓库才能 JOIN，耗时。
 策略：DuckDB 直接扫描多个 Parquet/CSV/JSON 文件或 HTTP S3 映射，利用虚拟表函数（如 `read_parquet`, `read_csv_auto`）做即时联邦 JOIN。
-要点：`SELECT * FROM read_parquet('s3://bucket/a.parquet') a JOIN read_csv_auto('local/b.csv') b ON a.id=b.id;`
+要点：
+```sql
+SELECT u.name, o.amount, o.order_date
+FROM read_parquet('s3://bucket/users.parquet') u
+JOIN read_csv_auto('local/orders.csv') o ON u.id = o.user_id;
+```
 成功指标：开发准备时间从天 → 小时；零重复落地。
 
 ### 场景 E：复杂报表生成流水线为单线程瓶颈
+
+**数据 Schema**：
+```sql
+-- 表名：sales（销售明细表）
+CREATE TABLE sales (
+    id BIGINT,              -- 交易 ID
+    region VARCHAR,         -- 地区：North, South, East, West
+    product VARCHAR,        -- 产品：A, B, C, D
+    amount DECIMAL,         -- 销售额
+    quantity INTEGER,       -- 销售数量
+    sale_date DATE,         -- 销售日期
+    salesperson VARCHAR     -- 销售人员
+);
+
+-- 示例数据
+-- id   | region | product | amount | quantity | sale_date
+-- -----|--------|---------|--------|----------|------------
+-- 1001 | North  | A       | 1000   | 10       | 2025-10-15
+-- 1002 | North  | B       | 1500   | 15       | 2025-10-15
+-- 1003 | South  | A       | 800    | 8        | 2025-10-15
+-- 1004 | South  | C       | 2000   | 20       | 2025-10-15
+-- 1005 | East   | A       | 1200   | 12       | 2025-10-16
+-- 1006 | West   | B       | 1800   | 18       | 2025-10-16
+```
+
 痛点：Python 里多层聚合 + 分组 + 透视慢。
 策略：用 DuckDB 的 `PIVOT` 与窗口函数一次完成；减少中间 DataFrame 物化。
-要点：`SELECT * FROM (SELECT region, product, SUM(amount) AS amt FROM sales GROUP BY 1,2) PIVOT (SUM(amt) FOR product IN ('A','B','C'));`
+要点：
+```sql
+SELECT * FROM (
+    SELECT region, product, SUM(amount) AS amt
+    FROM sales
+    GROUP BY 1,2
+) PIVOT (SUM(amt) FOR product IN ('A','B','C'));
+```
 成功指标：报表生成时间降低 ≥50%。
 
 ### 场景 F：日志小型 OLAP（无需引入 ClickHouse/Druid）
@@ -66,23 +218,61 @@ SELECT col, COUNT(*) AS dup_cnt FROM data GROUP BY col HAVING COUNT(*)>1; -- 唯
 成功指标：查询延迟（千万行内）可控制在秒级。
 
 ### 场景 G：模型离线验证（批量指标计算）
+
+**数据 Schema**：
+```sql
+-- 表名：predictions（模型预测结果表）
+CREATE TABLE predictions (
+    id BIGINT,              -- 样本 ID
+    pred INTEGER,           -- 预测标签（0/1）
+    pred_proba DECIMAL,     -- 预测概率
+    model_version VARCHAR   -- 模型版本
+);
+
+-- 表名：labels（真实标签表）
+CREATE TABLE labels (
+    id BIGINT,              -- 样本 ID（关联键）
+    truth INTEGER,          -- 真实标签（0/1）
+    source VARCHAR          -- 数据来源
+);
+
+-- 示例数据
+-- predictions:
+-- id    | pred | pred_proba | model_version
+-- ------|------|------------|---------------
+-- 10001 | 1    | 0.85       | v1.2
+-- 10002 | 0    | 0.32       | v1.2
+-- 10003 | 1    | 0.78       | v1.2
+-- 10004 | 1    | 0.65       | v1.2
+-- 10005 | 0    | 0.41       | v1.2
+
+-- labels:
+-- id    | truth | source
+-- ------|-------|--------
+-- 10001 | 1     | test    -- TP (True Positive)
+-- 10002 | 0     | test    -- TN (True Negative)
+-- 10003 | 0     | test    -- FP (False Positive)
+-- 10004 | 1     | test    -- TP (True Positive)
+-- 10005 | 1     | test    -- FN (False Negative)
+```
+
 痛点：写 Python 循环计算 precision/recall/F1 的批量版本缓慢且代码重复。
 策略：将预测与真实标签表 JOIN 后使用聚合计算所有指标；避免行级循环。
 要点：
 ```sql
 WITH eval AS (
- SELECT truth, pred, COUNT(*) AS cnt
- FROM predictions JOIN labels USING(id)
- GROUP BY 1,2
+    SELECT truth, pred, COUNT(*) AS cnt
+    FROM predictions JOIN labels USING(id)
+    GROUP BY 1,2
 ), m AS (
- SELECT SUM(CASE WHEN truth=1 AND pred=1 THEN cnt ELSE 0 END) AS TP,
-				SUM(CASE WHEN truth=0 AND pred=1 THEN cnt ELSE 0 END) AS FP,
-				SUM(CASE WHEN truth=1 AND pred=0 THEN cnt ELSE 0 END) AS FN
- FROM eval
+    SELECT SUM(CASE WHEN truth=1 AND pred=1 THEN cnt ELSE 0 END) AS TP,
+           SUM(CASE WHEN truth=0 AND pred=1 THEN cnt ELSE 0 END) AS FP,
+           SUM(CASE WHEN truth=1 AND pred=0 THEN cnt ELSE 0 END) AS FN
+    FROM eval
 )
 SELECT TP*1.0/(TP+FP) AS precision,
-			 TP*1.0/(TP+FN) AS recall,
-			 2*TP*1.0/(2*TP+FP+FN) AS f1
+       TP*1.0/(TP+FN) AS recall,
+       2*TP*1.0/(2*TP+FP+FN) AS f1
 FROM m;
 ```
 成功指标：指标计算统一、性能较循环提升数量级。
@@ -487,7 +677,41 @@ LOAD spatial;    -- 会话内加载
 ### 14.3 典型 LBS / GIS Problem Solving 场景
 
 #### 场景 A：附近 POI 搜索（半径过滤）
-数据：用户位置点表 `user_locs(lat, lon)`；POI 表 `pois(id, category, lat, lon)`。
+
+**数据 Schema**：
+```sql
+-- 表名：user_locs（用户位置表）
+CREATE TABLE user_locs (
+    user_id BIGINT,         -- 用户 ID
+    lat DECIMAL(9,6),       -- 纬度（例如：31.230416）
+    lon DECIMAL(9,6),       -- 经度（例如：121.473701）
+    timestamp TIMESTAMP     -- 位置更新时间
+);
+
+-- 表名：pois（POI 兴趣点表）
+CREATE TABLE pois (
+    id BIGINT,              -- POI ID
+    name VARCHAR,           -- POI 名称
+    category VARCHAR,       -- 类别：restaurant, cafe, hotel, shop
+    lat DECIMAL(9,6),       -- 纬度
+    lon DECIMAL(9,6),       -- 经度
+    rating DECIMAL(2,1)     -- 评分（1.0-5.0）
+);
+
+-- 示例数据
+-- user_locs:
+-- user_id | lat       | lon        | timestamp
+-- --------|-----------|------------|-------------------
+-- 10001   | 31.230416 | 121.473701 | 2025-10-15 10:00:00
+
+-- pois:
+-- id   | name              | category   | lat       | lon        | rating
+-- -----|-------------------|------------|-----------|------------|-------
+-- 1001 | Starbucks Coffee  | cafe       | 31.231200 | 121.474500 | 4.5
+-- 1002 | Pizza Hut         | restaurant | 31.229800 | 121.472900 | 4.2
+-- 1003 | Sheraton Hotel    | hotel      | 31.232500 | 121.476000 | 4.7
+```
+
 策略：先粗过滤（经纬度 bounding box）→ 精确球面距离。
 ```sql
 WITH params AS (SELECT 31.2304 AS qlat, 121.4737 AS qlon, 1000 AS radius_m),
@@ -525,7 +749,43 @@ LIMIT 100;
 进一步：可把 `(lat_bin, lon_bin)` 组合为字符串 key 供前端渲染热力图。
 
 #### 场景 C：行政区域落点统计（点 ↦ 多边形）
-数据：区域 GeoParquet `regions(id, name, geometry)`；事件点 `events(lat, lon)`。
+
+**数据 Schema**：
+```sql
+-- 表名：regions（行政区域表，GeoParquet 格式）
+CREATE TABLE regions (
+    id BIGINT,              -- 区域 ID
+    name VARCHAR,           -- 区域名称（如：Pudong District, Xuhui District）
+    level VARCHAR,          -- 行政级别：city, district, subdistrict
+    geometry GEOMETRY,      -- 区域多边形（WKT/WKB 格式）
+    population INTEGER      -- 人口数量
+);
+
+-- 表名：events（事件点表）
+CREATE TABLE events (
+    id BIGINT,              -- 事件 ID
+    event_type VARCHAR,     -- 事件类型：order, visit, complaint
+    lat DECIMAL(9,6),       -- 纬度
+    lon DECIMAL(9,6),       -- 经度
+    timestamp TIMESTAMP,    -- 事件时间
+    user_id BIGINT          -- 用户 ID
+);
+
+-- 示例数据
+-- regions（geometry 以 WKT 表示）:
+-- id   | name             | level    | geometry (示意)
+-- -----|------------------|----------|----------------------------------
+-- 1001 | Pudong District  | district | POLYGON((121.5 31.2, 121.6 31.2, ...))
+-- 1002 | Xuhui District   | district | POLYGON((121.4 31.2, 121.5 31.2, ...))
+
+-- events:
+-- id    | event_type | lat       | lon        | timestamp
+-- ------|------------|-----------|------------|-------------------
+-- 10001 | order      | 31.230416 | 121.550000 | 2025-10-15 10:00:00
+-- 10002 | visit      | 31.200000 | 121.430000 | 2025-10-15 11:00:00
+-- 10003 | order      | 31.220000 | 121.520000 | 2025-10-15 12:00:00
+```
+
 策略：先构造点 geometry，再用空间包含；对多 polygon 可预先 simplify 减少复杂度。
 ```sql
 WITH e AS (
@@ -541,8 +801,31 @@ ORDER BY events_cnt DESC;
 成功指标：区域映射正确率 100%；简化后执行时间下降明显（可用 `ST_Simplify`）。
 
 #### 场景 D：轨迹切片与停留点识别
-数据：`tracks(user_id, ts, lat, lon)` 有序。
-策略：借助窗口函数 + 距离与时间阈值识别“停留段”。
+
+**数据 Schema**：
+```sql
+-- 表名：tracks（用户轨迹表）
+CREATE TABLE tracks (
+    user_id BIGINT,         -- 用户 ID
+    ts TIMESTAMP,           -- 时间戳（必须有序）
+    lat DECIMAL(9,6),       -- 纬度
+    lon DECIMAL(9,6),       -- 经度
+    speed DECIMAL(5,2),     -- 速度（km/h，可选）
+    accuracy DECIMAL(5,2)   -- GPS 精度（米，可选）
+);
+
+-- 示例数据（按 user_id, ts 排序）
+-- user_id | ts                  | lat       | lon        | speed
+-- --------|---------------------|-----------|------------|------
+-- 10001   | 2025-10-15 08:00:00 | 31.230000 | 121.470000 | 0.0   -- 停留开始
+-- 10001   | 2025-10-15 08:02:00 | 31.230010 | 121.470015 | 0.5   -- 微小移动
+-- 10001   | 2025-10-15 08:05:00 | 31.230020 | 121.470020 | 0.3   -- 仍在停留
+-- 10001   | 2025-10-15 08:10:00 | 31.232000 | 121.475000 | 15.0  -- 开始移动
+-- 10001   | 2025-10-15 08:15:00 | 31.235000 | 121.480000 | 20.0  -- 持续移动
+-- 10001   | 2025-10-15 08:20:00 | 31.238000 | 121.485000 | 0.5   -- 新停留点
+```
+
+策略：借助窗口函数 + 距离与时间阈值识别"停留段"。
 ```sql
 WITH ordered AS (
 	SELECT *,

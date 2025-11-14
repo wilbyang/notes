@@ -1,0 +1,8 @@
+{
+  "alfredsnippet" : {
+    "snippet" : "function checkTagTypes(node, retSet) {\n    var treeWalker = document.createTreeWalker(\n\tnode,\n        NodeFilter.SHOW_ELEMENT,\n        { acceptNode: function(node) { return NodeFilter.FILTER_ACCEPT; } }\n    );\n    while (treeWalker.nextNode()) {\n        var node = treeWalker.currentNode;\n        retSet.add(node.tagName);\n\n\n    }\n\n}",
+    "uid" : "58A26984-56C4-46B1-8B81-3C6C11325D72",
+    "name" : "checktagtypes",
+    "keyword" : ""
+  }
+}
